@@ -118,7 +118,18 @@ go run ./cmd/server -dev -data ./data   # terminal 2: http://localhost:8080
 ```
 
 `-dev` proxies the frontend to Vite and keeps `/api` and `/media` on the Go
-server.
+server. If you open Vite directly (`:5173`) while the Go server is on another
+port, point Vite at it:
+
+```sh
+cd web-app
+VITE_BACKEND=http://localhost:8090 pnpm dev
+```
+
+Vite HMR persists the current story position before reloading, so a hot update
+returns to the same line instead of replaying the opening. In dev mode the
+opening movie is skipped by default; `?opening=1` forces it. In production it
+plays once per tab/session (`?opening=0` disables it).
 
 ## URL state and refresh
 

@@ -66,13 +66,19 @@ On load:
 - if the URL position has no matching snapshot, the VM starts at the given
   line as a best effort.
 
-`beforeunload` forces a final state write.
+`beforeunload`, `pagehide`, and Vite's HMR `dispose` hook force a final state
+write, so a hot reload resumes the current line/menu instead of replaying the
+opening. In dev mode the movie is skipped by default; in production it is
+remembered in `sessionStorage` and plays once per tab. `?opening=1` forces it
+and `?opening=0` disables it.
 
 ## Save snapshots
 
 A snapshot is intentionally compact: only non-zero numeric variables and
 non-empty strings are stored. Sprites, standing images, text lines, window
-config, background, BGM file, and the chapter/location strings are included.
+config, text visibility, background, BGM file, and the chapter/location strings
+are included. `textVisible` matters at the title screen: restoring a title
+snapshot must not leave an empty dialogue window on screen.
 
 ## Audio
 
