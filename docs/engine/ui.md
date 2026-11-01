@@ -23,17 +23,40 @@ Text is drawn on the canvas with fixed pitch from `setwindow`:
 
 ## Native UI
 
-The React shell adds a toolbar for Save / Load / Config / English / Log / Auto /
-Skip / Title / Full / Mute / Debug. It does not replace the game's scripted
-menus; it calls the original labels.
+The React shell adds a toolbar for Save / Load / Config / Extras / English /
+Log / Auto / Skip / Title / Full / Mute / Debug. It does not replace the game's
+scripted menus; it calls the original labels.
 
 **Extras** opens the original `*omake_menu`: music mode, CG gallery, scene
 replay and append scenario. The game only shows its title-screen おまけ button
 after the staff roll (`%220`); the toolbar button is available immediately.
+Unlike the title menu's `csp -1:textclear:textoff` path, the toolbar button
+performs the same cleanup itself, so story text, tachi and title sprites do not
+show through the gallery's partly transparent frame.
 
 The configuration screen’s **BACK SCREEN** selector is the message-window frame
 style, not the scene background. It sets `%208` and switches `mw_bg01u/d` …
 `mw_bg08u/d`; the right-hand preview is `cf_bgsel.bmp` cell `%208`.
+
+### CG and scene unlocks
+
+The gallery spec is NScripter's file-log form,
+`("EV2-3.bmp")":c/2,0,3;TE2-3.bmp":"gm_dummy.bmp"`. The VM keeps a set of
+viewed image files (`amehare.seenfiles.v1`) and marks a file when it is loaded
+by `bg`, `ld`, `lsp`/`lsph`, or `btndef`, mirroring `filelog`. A seen tag selects
+the thumbnail; an unseen tag selects the dummy. Since the dummy has one cell,
+`cellcheckspbtn` also refuses to create a hotspot for it.
+
+Scene replay uses label access instead: every label the VM reaches is added to
+`amehare.seen.v1`, and `lchk` tests that set. Both sets are per-browser and
+persist across reloads.
+
+For testing:
+
+- open `?unlock=all` once to mark every gallery tag and `rp_f*` scene label;
+- open `?unlock=clear` to relock everything;
+- or use **D → Unlock all CGs / scenes** and **Clear unlock data**;
+- from DevTools, `__amehare.vm.markFileSeen("EV2-3.bmp")` unlocks one CG.
 
 With translations.json present, **English / 日本語** (or **L**) switches the
 dialogue to English. The canvas text is hidden and a DOM overlay over the text

@@ -110,7 +110,9 @@ export class Vm {
   translations: TranslationData | null = null;
   language: "ja" | "en" = "ja";
   seenLabels = new Set<string>();
+  seenFiles = new Set<string>();
   private seenTimer: number | null = null;
+  private seenFilesTimer: number | null = null;
 
   private waiter: ((ev: InputEvent) => void) | null = null;
   private waitKind: WaitKind = "none";
@@ -153,6 +155,7 @@ export class Vm {
     this.loadGlobals();
     this.seedSaveLabels();
     this.loadSeenLabels();
+    this.loadSeenFiles();
   }
 
   /** Start execution, optionally restoring a snapshot and/or reopening a menu. */
@@ -177,7 +180,12 @@ export class Vm {
     if (menu) {
       const line = this.script.lines[this.pc];
       this.menuResumePc = this.pc;
-      if (line?.kind === "text") {
+      if (this.isExtrasMenu(menu)) {
+        this.clearStageForExtras();
+        this.menuLabel = menu;
+        this.menuReturnDepth = this.callStack.length;
+        this.pendingGosub = menu;
+      } else if (line?.kind === "text") {
         this.deferredMenu = menu;
       } else {
         this.menuLabel = menu;
@@ -272,6 +280,7 @@ export class Vm {
     if (this.deferredMenu) {
       const menu = this.deferredMenu;
       this.deferredMenu = null;
+      if (this.isExtrasMenu(menu)) this.clearStageForExtras();
       this.menuLabel = menu;
       this.menuReturnDepth = this.callStack.length;
       this.menuResumePc = startPc;
@@ -863,6 +872,7 @@ export class Vm {
       // ---- images
       case "bg": {
         const file = this.evalStr(arg(0)) || "black";
+        this.noteImage(file);
         const effect = num(1, 0);
         const duration = num(2, 0);
         this.bgFrom = this.bg;
@@ -880,6 +890,7 @@ export class Vm {
         const idx = slot === "l" ? 0 : slot === "c" ? 1 : slot === "r" ? 2 : -1;
         if (idx < 0) break;
         const spec = parseSpec(this.evalStr(arg(1)), this.script.define.defaultMode);
+        if (spec.mode !== "s") this.noteImage(spec.file);
         void this.placeTachi(idx, spec);
         break;
       }
@@ -895,6 +906,7 @@ export class Vm {
       case "lsph": {
         const no = num(0);
         const spec = parseSpec(this.evalStr(arg(1)), this.script.define.defaultMode);
+        if (spec.mode !== "s") this.noteImage(spec.file);
         this.setSprite(no, spec, num(2), num(3), name === "lsp");
         break;
       }
@@ -939,7 +951,8 @@ export class Vm {
       case "cellcheckspbtn": {
         const spriteNo = num(0);
         const no = num(1);
-        if (no >= 1 && this.sprites.has(spriteNo)) {
+        const sp = this.sprites.get(spriteNo);
+        if (no >= 1 && sp && sp.spec.cells >= 2) {
           this.buttons.push({ no, kind: "sprite", spriteNo });
         }
         break;
@@ -967,6 +980,7 @@ export class Vm {
           this.btndefImage = null;
         } else {
           this.btndefFile = file;
+          this.noteImage(file);
           await this.loadBtndef(file);
         }
         break;
@@ -1577,9 +1591,13 @@ export class Vm {
     if (!s) return "";
     // NScripter file-log form: ("tag")"first""second". The tag is the CG
     // filename; "first" is the thumbnail shown once it has been logged and
-    // "second" is the dummy used for unseen CGs. We always take the thumbnail.
+    // "second" is the dummy used for unseen CGs.
     const tagged = /^\(\s*"((?:[^"\\]|\\.)*)"\s*\)\s*"((?:[^"\\]|\\.)*)"\s*"((?:[^"\\]|\\.)*)"\s*$/.exec(s);
-    if (tagged) return tagged[2].replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+    if (tagged) {
+      const seen = this.seenFiles.has(this.normalizeAssetName(tagged[1]));
+      const chosen = seen ? tagged[2] : tagged[3];
+      return chosen.replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+    }
     if (s.startsWith('"')) return unquote(s);
     if (s.startsWith("$")) return this.getStr(this.strIndex(s));
     return s;
@@ -1774,11 +1792,7 @@ export class Vm {
     if (this.seenTimer !== null) return;
     this.seenTimer = window.setTimeout(() => {
       this.seenTimer = null;
-      try {
-        localStorage.setItem("amehare.seen.v1", JSON.stringify([...this.seenLabels]));
-      } catch {
-        /* ignore quota */
-      }
+      this.persistSeenLabelsNow();
     }, 500);
   }
 
@@ -1794,7 +1808,127 @@ export class Vm {
     }
   }
 
+  persistSeenLabelsNow() {
+    try {
+      localStorage.setItem("amehare.seen.v1", JSON.stringify([...this.seenLabels]));
+    } catch {
+      /* ignore quota */
+    }
+  }
+
+  /** NScripter image names are case-insensitive and use backslashes on disc. */
+  private normalizeAssetName(name: string): string {
+    return name.trim().toLowerCase().replace(/\\/g, "/");
+  }
+
+  /**
+   * Mark an image as viewed, mirroring NScripter's filelog. The CG gallery
+   * evaluates ("EV2-3.bmp")"thumb""dummy" against this set.
+   */
+  markFileSeen(name: string) {
+    const key = this.normalizeAssetName(name);
+    if (!key || this.seenFiles.has(key)) return;
+    this.seenFiles.add(key);
+    if (this.seenFilesTimer !== null) return;
+    this.seenFilesTimer = window.setTimeout(() => {
+      this.seenFilesTimer = null;
+      this.persistSeenFilesNow();
+    }, 500);
+  }
+
+  private noteImage(file: string | null | undefined) {
+    if (!file) return;
+    const f = file.trim();
+    if (!f || f.startsWith("$") || f.startsWith("#")) return;
+    const lower = f.toLowerCase();
+    if (lower === "black" || lower === "white") return;
+    this.markFileSeen(f);
+  }
+
+  private loadSeenFiles() {
+    try {
+      const raw = localStorage.getItem("amehare.seenfiles.v1");
+      if (raw) {
+        const arr = JSON.parse(raw) as string[];
+        for (const x of arr) if (typeof x === "string") this.seenFiles.add(this.normalizeAssetName(x));
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  persistSeenFilesNow() {
+    try {
+      localStorage.setItem("amehare.seenfiles.v1", JSON.stringify([...this.seenFiles]));
+    } catch {
+      /* ignore quota */
+    }
+  }
+
+  /** Testing helper: unlock every gallery CG tag and scene-replay label. */
+  unlockAllExtras() {
+    const tag = /\("([^"]+)"\)/g;
+    for (const line of this.script.lines) {
+      if (line.raw) {
+        tag.lastIndex = 0;
+        let m: RegExpExecArray | null;
+        while ((m = tag.exec(line.raw))) this.markFileSeen(m[1]);
+      }
+      if (line.kind === "label" && line.label?.toLowerCase().startsWith("rp_f")) {
+        this.markLabel(line.label);
+      }
+    }
+    this.persistSeenFilesNow();
+    this.persistSeenLabelsNow();
+    this.hooks.requestRender();
+  }
+
+  /** Testing helper: clear viewed CGs and seen scene labels. */
+  clearExtras() {
+    this.seenFiles.clear();
+    this.seenLabels.clear();
+    this.persistSeenFilesNow();
+    this.persistSeenLabelsNow();
+    this.hooks.requestRender();
+  }
+
   // ---------------------------------------------------------------- UI hooks
+
+  private isExtrasMenu(menu: string): boolean {
+    return ["omake_menu", "music_menu", "gallery_menu", "replay_menu", "append_menu"].includes(
+      menu.toLowerCase(),
+    );
+  }
+
+  private clearStageForExtras() {
+    this.sprites.clear();
+    this.spriteDims.clear();
+    this.tachi = [null, null, null];
+    this.buttons = [];
+    this.hoverButton = null;
+    this.btndefFile = null;
+    this.btndefImage = null;
+    this.textLines = [];
+    this.textVisible = false;
+    this.revealed = 0;
+    this.revealedFrom = 0;
+    this.typing = false;
+    if (this.typeTimer !== null) {
+      window.clearTimeout(this.typeTimer);
+      this.typeTimer = null;
+    }
+  }
+
+  /**
+   * Open the omake hub from the toolbar. The original title menu does
+   * `csp -1:textclear:textoff` before entering omake; do the same here so
+   * story text, tachi and title buttons do not bleed through the gallery's
+   * partly transparent frame.
+   */
+  openExtras() {
+    this.clearStageForExtras();
+    this.requestGosub("*omake_menu");
+  }
 
   requestGosub(label: string) {
     const menu = normalizeLabelArg(label);

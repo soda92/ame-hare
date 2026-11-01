@@ -290,3 +290,10 @@ button.on {
   margin: 6px 0 0;
   color: var(--text);
 }
+
+.debug-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}

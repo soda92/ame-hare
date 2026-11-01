@@ -169,6 +169,11 @@ line.
   gallery, scene replay, append scenario), even before the ending unlocks the
   title-screen omake button. The in-game system buttons drawn by the game also
   work.
+- CGs are marked viewed when their image is first loaded (`bg`, `ld`, `lsp`,
+  `btndef`), mirroring NScripter's `filelog`; the gallery only shows thumbnails
+  for viewed CGs. Scene-replay entries unlock from reached labels (`lchk`).
+  Both persist per browser. For testing, load `?unlock=all` once (or use
+  **Debug → Unlock all CGs / scenes**); `?unlock=clear` relocks everything.
 
 ## Layout
 

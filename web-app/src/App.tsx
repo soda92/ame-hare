@@ -205,6 +205,8 @@ export default function App() {
         }
         vm.setLanguage(initialLang);
         setLanguage(initialLang);
+        if (params.get("unlock") === "all") vm.unlockAllExtras();
+        else if (params.get("unlock") === "clear") vm.clearExtras();
         vmRef.current = vm;
         (window as unknown as { __amehare?: unknown }).__amehare = {
           vm,
@@ -508,7 +510,7 @@ export default function App() {
           <button onClick={() => gosub("*config_menu")}>Config</button>
           <button
             title="CG gallery, scene replay, music and append scenario"
-            onClick={() => gosub("*omake_menu")}
+            onClick={() => vmRef.current?.openExtras()}
           >
             Extras
           </button>
@@ -555,6 +557,14 @@ export default function App() {
           <div>label {vmRef.current?.debugState().label}</div>
           <div>line {debugLine?.no}</div>
           <div className="cmd">{debugLine?.raw}</div>
+          <div>
+            seen files {vmRef.current?.seenFiles.size ?? 0} · labels{" "}
+            {vmRef.current?.seenLabels.size ?? 0}
+          </div>
+          <div className="debug-actions">
+            <button onClick={() => vmRef.current?.unlockAllExtras()}>Unlock all CGs / scenes</button>
+            <button onClick={() => vmRef.current?.clearExtras()}>Clear unlock data</button>
+          </div>
           <pre>{JSON.stringify(vmRef.current?.debugState().vars, null, 1)}</pre>
         </div>
       )}
