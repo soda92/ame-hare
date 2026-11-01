@@ -31,3 +31,19 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Game data and disc images (never commit these)
+/data/
+/.cache/
+*.iso
+*.img
+*.ccd
+*.cue
+*.sub
+*.mdf
+*.mds
+
+# Frontend
+/web-app/node_modules/
+/web-app/dist/
+/web-app/.vite/
