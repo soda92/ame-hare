@@ -120,7 +120,7 @@ export default function App() {
               sameScene &&
               sameCmd &&
               sameMenu &&
-              st.snapshot?.version === 2 &&
+              st.snapshot?.version === 3 &&
               Array.isArray(st.snapshot.buttons)
             ) {
               restored = st;
@@ -155,6 +155,23 @@ export default function App() {
                 if (!manifest.movie) {
                   window.setTimeout(resolve, 250);
                   return;
+                }
+                const opening = new URLSearchParams(window.location.search).get("opening");
+                const force = opening === "1";
+                const disabled = opening === "0";
+                const devSkip = import.meta.env.DEV && opening === null;
+                try {
+                  if (
+                    disabled ||
+                    devSkip ||
+                    (!force && sessionStorage.getItem("amehare.opening.v1") === "1")
+                  ) {
+                    window.setTimeout(resolve, 250);
+                    return;
+                  }
+                  sessionStorage.setItem("amehare.opening.v1", "1");
+                } catch {
+                  /* ignore storage failures */
                 }
                 movieResolve.current = resolve;
                 setMovie(manifest.movie);
@@ -328,7 +345,14 @@ export default function App() {
   useEffect(() => {
     const onUnload = () => vmRef.current?.persistState();
     window.addEventListener("beforeunload", onUnload);
-    return () => window.removeEventListener("beforeunload", onUnload);
+    window.addEventListener("pagehide", onUnload);
+    if (import.meta.hot) {
+      import.meta.hot.dispose(() => vmRef.current?.persistState());
+    }
+    return () => {
+      window.removeEventListener("beforeunload", onUnload);
+      window.removeEventListener("pagehide", onUnload);
+    };
   }, []);
 
   const toggleFullscreen = async () => {

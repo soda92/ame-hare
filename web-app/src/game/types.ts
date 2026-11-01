@@ -119,11 +119,12 @@ export interface SaveSlot {
 }
 
 export interface Snapshot {
-  version: 2;
+  version: 3;
   pc: number;
   vars: Record<number, number>;
   strs: Record<number, string>;
   textLines: string[];
+  textVisible: boolean;
   textWindow: TextWindow;
   textColor: string;
   bg: string | null;

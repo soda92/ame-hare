@@ -20,7 +20,7 @@ export class SaveStore {
       const raw = localStorage.getItem(SAVES_KEY);
       this.slots = raw ? (JSON.parse(raw) as Record<number, SaveSlot>) : {};
       for (const [k, s] of Object.entries(this.slots)) {
-        if (s.snapshot?.version !== 2) delete this.slots[Number(k)];
+        if (s.snapshot?.version !== 3) delete this.slots[Number(k)];
       }
     } catch {
       this.slots = {};

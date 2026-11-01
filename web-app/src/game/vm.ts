@@ -159,7 +159,7 @@ export class Vm {
   async start(opts: { snapshot?: Snapshot; pc?: number; menu?: string | null } = {}) {
     if (this.running) return;
     this.suppressState = true;
-    if (opts.snapshot && opts.snapshot.version === 2 && Array.isArray(opts.snapshot.buttons)) {
+    if (opts.snapshot && opts.snapshot.version === 3 && Array.isArray(opts.snapshot.buttons)) {
       await this.restoreSnapshot(opts.snapshot);
       this.pc = Math.max(0, Math.min(this.script.lines.length - 1, opts.snapshot.pc));
     } else if (opts.pc !== undefined) {
@@ -1229,7 +1229,7 @@ export class Vm {
       case "loadgame": {
         const slot = this.evalNum(arg(0));
         const s = this.saves.get(slot);
-        if (s && s.snapshot.version === 2 && Array.isArray(s.snapshot.buttons)) {
+        if (s && s.snapshot.version === 3 && Array.isArray(s.snapshot.buttons)) {
           await this.restoreSnapshot(s.snapshot);
           this.cmdQueue = [];
           this.pc = s.snapshot.pc;
@@ -1593,11 +1593,12 @@ export class Vm {
     const strs: Record<number, string> = {};
     for (let i = 0; i < this.strs.length; i++) if (this.strs[i]) strs[i] = this.strs[i];
     return {
-      version: 2,
+      version: 3,
       pc,
       vars,
       strs,
       textLines: [...lines],
+      textVisible: this.textVisible,
       textWindow: { ...this.textWindow },
       textColor: this.textColor,
       bg: this.bg,
@@ -1634,6 +1635,7 @@ export class Vm {
     for (const [k, v] of Object.entries(s.vars)) this.vars[Number(k)] = v;
     for (const [k, v] of Object.entries(s.strs)) this.strs[Number(k)] = v;
     this.textLines = [...s.textLines];
+    this.textVisible = s.textVisible ?? true;
     this.textWindow = { ...s.textWindow };
     this.textColor = s.textColor;
     this.bg = s.bg;
