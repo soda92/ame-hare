@@ -307,6 +307,7 @@ export default function App() {
   return (
     <div className="app">
       <div className="stage-wrap">
+        <div className="stage-box">
         <canvas
           ref={canvasRef}
           className="stage"
@@ -398,6 +399,7 @@ export default function App() {
             <button onClick={() => window.location.reload()}>タイトルへ戻る</button>
           </div>
         )}
+        </div>
       </div>
 
       {started && (
