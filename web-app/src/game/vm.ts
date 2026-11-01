@@ -73,6 +73,8 @@ export class Vm {
   textVisible = true;
   textSpeed = 30;
   revealed = 0;
+  /** Character offset (in textLines) where the newly appended block starts. */
+  revealedFrom = 0;
   typing = false;
   private typeTimer: number | null = null;
   private autoTimer: number | null = null;
@@ -278,10 +280,12 @@ export class Vm {
 
   private appendText(block: string[]) {
     const rows = Math.max(1, this.textWindow.rows);
-    if (this.textLines.length + block.length > rows) this.textLines = [];
-    this.textLines.push(...block);
-    if (this.textLines.length > rows) this.textLines.splice(0, this.textLines.length - rows);
-    this.revealed = 0;
+    const lines = block.length > rows ? block.slice(-rows) : block;
+    if (this.textLines.length + lines.length > rows) this.textLines = [];
+    // Only type out the newly appended block; earlier lines stay fully visible.
+    this.revealedFrom = this.totalChars();
+    this.textLines.push(...lines);
+    this.revealed = this.revealedFrom;
   }
 
   private totalChars(): number {
@@ -297,7 +301,7 @@ export class Vm {
       this.scheduleAuto();
     } else {
       this.typing = true;
-      this.revealed = 0;
+      this.revealed = this.revealedFrom;
       this.typeTimer = window.setInterval(() => {
         this.revealed++;
         if (this.revealed >= total) {
@@ -813,6 +817,7 @@ export class Vm {
       case "textclear":
         this.textLines = [];
         this.revealed = 0;
+        this.revealedFrom = 0;
         break;
       case "textoff":
         this.textVisible = false;
@@ -834,6 +839,7 @@ export class Vm {
         this.textWindow = parseSetwindow(rest, this.script.define.defaultMode);
         this.textLines = [];
         this.revealed = 0;
+        this.revealedFrom = 0;
         break;
       case "ispage": {
         const i = this.numIndex(arg(0));
@@ -1456,6 +1462,7 @@ export class Vm {
         if (this.lastTextSnapshot && this.lastTextSnapshot.pc === this.menuResumePc) {
           this.textLines = [...this.lastTextSnapshot.textLines];
           this.revealed = 0;
+          this.revealedFrom = 0;
         }
         this.pc = this.menuResumePc;
         this.cmdQueue = [];
@@ -1653,6 +1660,7 @@ export class Vm {
       }
     }
     this.revealed = this.totalChars();
+    this.revealedFrom = this.revealed;
     this.audio.setBgmVolume(s.audio.bgmVolume ?? this.script.define.defBgmVol);
     this.audio.setSeVolume(s.audio.seVolume ?? this.script.define.defSeVol);
     this.audio.setVoiceVolume(s.audio.voiceVolume ?? this.script.define.defVoiceVol);
