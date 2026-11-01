@@ -25,7 +25,8 @@
 - BGM, SE, and voice; IMA ADPCM decoded in the browser (verified against
   ffmpeg).
 - Opening MPEG movie transcoded to MP4 and played in the stage.
-- Backlog, auto mode, skip mode, mute, fullscreen, debug overlay.
+- Backlog, auto mode, skip mode, mute, fullscreen, debug overlay; Space hides
+  the dialogue chrome over full-screen CGs.
 - URL + snapshot persistence: refresh restores the scene, text, menu, stage,
   variables, and audio. Restored snapshots reconcile standing images against
   the last `bg` and drop stale menu hotspots.

@@ -62,6 +62,11 @@ In the full-screen gallery viewer, **← / →** move to the previous / next see
 CG (wrapping across pages and skipping locked entries); clicking still returns
 to the grid.
 
+While a full-screen CG is displayed (story CG, scene replay, or the gallery
+viewer), **Space** hides and restores the dialogue/window chrome. The game
+state is untouched; clicking while hidden restores the chrome instead of
+advancing or triggering an invisible button.
+
 Scene replay uses label access instead: every label the VM reaches is added to
 `amehare.seen.v1`, and `lchk` tests that set. Both sets are per-browser and
 persist across reloads.

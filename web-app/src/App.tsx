@@ -301,7 +301,11 @@ export default function App() {
       }
       if (!vm) return;
       if (e.target instanceof HTMLInputElement) return;
-      if (e.key === "Enter" || e.key === " ") {
+      if (e.key === " ") {
+        e.preventDefault();
+        if (vm.toggleChrome()) return;
+        void vm.keyEnter();
+      } else if (e.key === "Enter") {
         e.preventDefault();
         void vm.keyEnter();
       } else if (e.key === "Escape") {

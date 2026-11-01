@@ -146,6 +146,12 @@ export class DomStageRenderer {
       }
     }
     this.root.style.transform = qx || qy ? `translate(${u(qx)}, ${u(qy)})` : "";
+    const hideChrome = vm.chromeHidden;
+    this.frameLayer.style.display = hideChrome ? "none" : "";
+    this.windowLayer.style.display = hideChrome ? "none" : "";
+    this.textLayer.style.display = hideChrome ? "none" : "";
+    this.frontLayer.style.display = hideChrome ? "none" : "";
+    this.buttonLayer.style.display = hideChrome ? "none" : "";
 
     this.drawBackground(time);
     this.drawTachi();
@@ -244,7 +250,7 @@ export class DomStageRenderer {
     this.syncSprites(
       this.spriteNodes,
       this.spriteLayer,
-      (no) => no !== 108 && no !== 109 && no >= 100,
+      (no) => no !== 108 && no !== 109 && no >= 100 && no !== 106 && no !== 107,
       false,
     );
   }
@@ -265,7 +271,7 @@ export class DomStageRenderer {
       (no) =>
         no !== 108 &&
         no !== 109 &&
-        no < 100 &&
+        (no < 100 || no === 106 || no === 107) &&
         !(this.vm.language === "en" && no === 91),
       false,
     );

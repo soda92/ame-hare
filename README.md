@@ -156,8 +156,9 @@ line.
 
 ## Controls
 
-- **Click / Enter / Space** — advance dialogue; the first click completes the
-  typewriter
+- **Click / Enter** — advance dialogue; the first click completes the typewriter
+- **Space** — advance dialogue normally; over a full-screen CG, hide/show the
+  dialogue chrome instead
 - **Right click** — backlog
 - **Esc** — cancel / back (where the script supports it)
 - **Ctrl** — toggle skip

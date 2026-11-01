@@ -72,6 +72,8 @@ export class Vm {
   textWindow: TextWindow;
   textColor: string;
   textVisible = true;
+  /** Presentation-only: hide dialogue/window chrome while viewing a CG. */
+  chromeHidden = false;
   textSpeed = 30;
   revealed = 0;
   /** Character offset (in textLines) where the newly appended block starts. */
@@ -416,6 +418,11 @@ export class Vm {
   /** Feed a left click at logical screen coordinates. */
   async click(x: number, y: number) {
     this.audio.resume();
+    if (this.chromeHidden) {
+      this.chromeHidden = false;
+      this.hooks.requestRender();
+      return;
+    }
     if (this.waitKind === "text" || this.waitKind === "none") {
       const action = this.hotspot(x, y);
       if (action) {
@@ -895,6 +902,7 @@ export class Vm {
         const duration = num(2, 0);
         this.bgFrom = this.bg;
         this.bg = file;
+        this.chromeHidden = false;
         // ONScripter's bg command removes all standing images.
         this.tachi = [null, null, null];
         if (duration > 0 && effect > 0) {
@@ -1727,6 +1735,7 @@ export class Vm {
     for (const [k, v] of Object.entries(s.strs)) this.strs[Number(k)] = v;
     this.textLines = [...s.textLines];
     this.textVisible = s.textVisible ?? true;
+    this.chromeHidden = false;
     this.textWindow = { ...s.textWindow };
     this.textColor = s.textColor;
     this.bg = s.bg;
@@ -2004,6 +2013,7 @@ export class Vm {
     this.btndefImage = null;
     this.textLines = [];
     this.textVisible = false;
+    this.chromeHidden = false;
     this.revealed = 0;
     this.revealedFrom = 0;
     this.typing = false;
@@ -2022,6 +2032,20 @@ export class Vm {
   openExtras() {
     this.clearStageForExtras();
     this.requestGosub("*omake_menu");
+  }
+
+  private isFullCgView(): boolean {
+    if (this.galleryView) return true;
+    const bg = this.bg ?? "";
+    return /^(ev|ti)/i.test(bg);
+  }
+
+  /** Space toggles dialogue/window chrome over a CG. Returns false off-CG. */
+  toggleChrome(): boolean {
+    if (!this.isFullCgView()) return false;
+    this.chromeHidden = !this.chromeHidden;
+    this.hooks.requestRender();
+    return true;
   }
 
   /** Move between full-screen CG previews with the arrow keys. */
@@ -2109,6 +2133,7 @@ export class Vm {
 
   requestGosub(label: string) {
     const menu = normalizeLabelArg(label);
+    this.chromeHidden = false;
     this.menuLabel = menu;
     this.menuReturnDepth = this.callStack.length;
     if (this.waitKind === "text" && this.lastTextSnapshot) {
