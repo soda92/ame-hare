@@ -23,9 +23,14 @@ Text is drawn on the canvas with fixed pitch from `setwindow`:
 
 ## Native UI
 
-The React shell adds a toolbar for Save / Load / Config / Log / Auto / Skip /
-Title / Full / Mute / Debug. It does not replace the game's scripted menus; it
-calls the original labels. The game's own system buttons (sprites 80–88 and the
+The React shell adds a toolbar for Save / Load / Config / English / Log / Auto /
+Skip / Title / Full / Mute / Debug. It does not replace the game's scripted
+menus; it calls the original labels.
+
+With translations.json present, **English / 日本語** (or **L**) switches the
+dialogue to English. The canvas text is hidden and a DOM overlay over the text
+window shows the translated block; name plates and `:s` string sprites are
+translated from the `sprites` map. Clicks pass through the overlay. The game's own system buttons (sprites 80–88 and the
 voice icon 106) are hit-tested as hotspots during dialogue, so clicking them
 opens the same menus.
 

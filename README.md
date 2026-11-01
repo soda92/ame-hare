@@ -34,7 +34,7 @@ the extractor at your own discs.
 | Backlog, auto mode, skip mode, fullscreen, debug panel | ✅ |
 | URL scene/command/menu state and refresh restore | ✅ |
 | Static script/asset audit (`cmd/audit`) and CI | ✅ |
-| Translation sidecar / English UI | ⛔ not started |
+| English machine-translation sidecar and JA/EN toggle | ✅ |
 
 ## Quick start
 
@@ -84,7 +84,17 @@ pnpm install
 pnpm build
 ```
 
-### 3. Audit the extracted data
+### 3. Generate the English sidecar (optional)
+
+```sh
+go run ./cmd/translate
+```
+
+This builds `data/translations.json` with the public Google Translate web
+endpoint. It is resumable and writes after every batch. Re-run with `-repair`
+to retry entries that still contain Japanese.
+
+### 4. Audit the extracted data
 
 ```sh
 go run ./cmd/audit -script ./data/script.txt -data ./data
@@ -94,7 +104,7 @@ This checks label targets, `for`/`next` balance, commands against the VM
 implementation, and every referenced image/audio/movie asset. The current
 script passes with zero errors and zero missing assets.
 
-### 4. Run
+### 5. Run
 
 ```sh
 go run ./cmd/server -data ./data -addr :8080
@@ -139,6 +149,7 @@ line.
 - **Esc** — cancel / back (where the script supports it)
 - **Ctrl** — toggle skip
 - **A** — toggle auto
+- **L** — switch Japanese / English
 - **M** — mute
 - **F** — fullscreen
 - **D** — debug overlay
@@ -150,6 +161,7 @@ line.
 ```text
 cmd/extract/        disc + archive + script + media extractor
 cmd/audit/          static script/asset checker
+cmd/translate/      resumable English sidecar builder
 cmd/server/         HTTP server and static media
 pkg/disc/           CloneCD / ISO 9660 + Joliet reader
 pkg/nsa/            NScripter NSA archive and SPB bitmap codec
@@ -181,6 +193,7 @@ and refresh restore.
 - [docs/formats/audio.md](docs/formats/audio.md) — IMA ADPCM WAV
 - [docs/formats/movie.md](docs/formats/movie.md) — MPEG program stream
 - [docs/engine/script.md](docs/engine/script.md) — NScripter script/VM notes
+- [docs/engine/translation.md](docs/engine/translation.md) — English sidecar and JA/EN UI
 - [docs/engine/ui.md](docs/engine/ui.md) — stage layout, menus, URL state
 - [docs/progress.md](docs/progress.md) — what works and what is next
 

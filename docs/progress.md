@@ -19,6 +19,8 @@
 - Colour backgrounds (`bg #RRGGBB`) and `bgmonce`.
 - Static audit (`cmd/audit`) with zero errors / zero missing assets, and CI for
   Go tests/vet plus the frontend build.
+- English machine-translation sidecar (`cmd/translate`): 7,159 dialogue/choice
+  strings and 230 string sprites, with a JA/EN toggle and DOM dialogue overlay.
 - BGM, SE, and voice; IMA ADPCM decoded in the browser (verified against
   ffmpeg).
 - Opening MPEG movie transcoded to MP4 and played in the stage.
@@ -42,7 +44,9 @@
 - Menus opened by the game's own `gosub` (rather than the host toolbar /
   on-screen system buttons) are not mirrored as `menu=` in the URL; the
   scene/command snapshot still restores to that screen.
-- Translation / English sidecar is not implemented.
+- English is a machine-translated draft; UI artwork with baked-in Japanese
+  (title/menu button images) is not translated. Very long English blocks can be
+  clipped by the overlay height.
 - The movie requires ffmpeg at extraction time.
 
 ## Next
