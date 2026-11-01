@@ -164,8 +164,11 @@ line.
 - **M** — mute
 - **F** — fullscreen
 - **D** — debug overlay
-- The toolbar exposes Save / Load / Config / Log / Auto / Skip / Title / Full /
-  Mute / Debug. The in-game system buttons drawn by the game also work.
+- The toolbar exposes Save / Load / Config / Extras / Log / Auto / Skip / Title /
+  Full / Mute / Debug. **Extras** opens the original omake hub (music, CG
+  gallery, scene replay, append scenario), even before the ending unlocks the
+  title-screen omake button. The in-game system buttons drawn by the game also
+  work.
 
 ## Layout
 

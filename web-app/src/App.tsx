@@ -507,6 +507,12 @@ export default function App() {
           <button onClick={() => gosub("*load_menu")}>Load</button>
           <button onClick={() => gosub("*config_menu")}>Config</button>
           <button
+            title="CG gallery, scene replay, music and append scenario"
+            onClick={() => gosub("*omake_menu")}
+          >
+            Extras
+          </button>
+          <button
             disabled={!translations}
             className={language === "en" ? "on" : ""}
             title={translations ? "Toggle Japanese / English" : "translations.json not found"}

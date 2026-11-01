@@ -58,3 +58,6 @@
 - Browser walkthrough automation that follows the whole story and reports
   stuck labels; the static audit already covers labels, loops, commands and
   assets.
+- Optional native unlock controls for extras if you want gallery/scene review
+  without using the in-game omake menu (currently the **Extras** toolbar button
+  opens the original hub at any time).

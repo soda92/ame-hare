@@ -27,6 +27,14 @@ The React shell adds a toolbar for Save / Load / Config / English / Log / Auto /
 Skip / Title / Full / Mute / Debug. It does not replace the game's scripted
 menus; it calls the original labels.
 
+**Extras** opens the original `*omake_menu`: music mode, CG gallery, scene
+replay and append scenario. The game only shows its title-screen おまけ button
+after the staff roll (`%220`); the toolbar button is available immediately.
+
+The configuration screen’s **BACK SCREEN** selector is the message-window frame
+style, not the scene background. It sets `%208` and switches `mw_bg01u/d` …
+`mw_bg08u/d`; the right-hand preview is `cf_bgsel.bmp` cell `%208`.
+
 With translations.json present, **English / 日本語** (or **L**) switches the
 dialogue to English. The canvas text is hidden and a DOM overlay over the text
 window shows the translated block; name plates and `:s` string sprites are
