@@ -8,10 +8,12 @@ The project has two halves:
 - **Go backend** — CloneCD / ISO reader, NScripter NSA archive and SPB bitmap
   decoder, script deobfuscation, asset extraction (PNG / WAV / MP4), and an
   HTTP server.
-- **React + Vite frontend** — an 800×600 canvas stage with a reimplementation
+- **React + Vite frontend** — an 800×600 DOM stage with a reimplementation
   of the NScripter VM, sprites, standing images, text window, choices, audio,
   save/load, and the original title / configuration / save / load / music /
-  gallery menus (which are themselves scripted by the game).
+  gallery menus (which are themselves scripted by the game). Dialogue, names
+  and menu labels are real HTML text, so they stay crisp when the stage is
+  scaled up.
 
 Nothing from the original game is included. You must own the game and point
 the extractor at your own discs.
@@ -164,6 +166,7 @@ line.
 - **M** — mute
 - **F** — fullscreen
 - **D** — debug overlay
+- **← / →** — previous / next CG in the full-screen gallery viewer
 - The toolbar exposes Save / Load / Config / Extras / Log / Auto / Skip / Title /
   Full / Mute / Debug. **Extras** opens the original omake hub (music, CG
   gallery, scene replay, append scenario), even before the ending unlocks the
@@ -171,9 +174,10 @@ line.
   work.
 - CGs are marked viewed when their image is first loaded (`bg`, `ld`, `lsp`,
   `btndef`), mirroring NScripter's `filelog`; the gallery only shows thumbnails
-  for viewed CGs. Scene-replay entries unlock from reached labels (`lchk`).
-  Both persist per browser. For testing, load `?unlock=all` once (or use
-  **Debug → Unlock all CGs / scenes**); `?unlock=clear` relocks everything.
+  for viewed CGs, and unlocked thumbnails use their colour cell instead of the
+  grayscale hover cell. Scene-replay entries unlock from reached labels
+  (`lchk`). Both persist per browser. For testing, load `?unlock=all` once (or
+  use **Debug → Unlock all CGs / scenes**); `?unlock=clear` relocks everything.
 
 ## Layout
 

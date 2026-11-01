@@ -5,7 +5,7 @@ import { AssetStore } from "./game/assets";
 import { AudioEngine } from "./game/audio";
 import { SaveStore } from "./game/save";
 import { Vm } from "./game/vm";
-import { StageRenderer } from "./game/stage";
+import { DomStageRenderer } from "./game/domStage";
 
 const SESSION_KEY = "amehare.session.v1";
 
@@ -50,9 +50,9 @@ function urlForState(state: UrlState): string {
 }
 
 export default function App() {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const stageRef = useRef<HTMLDivElement | null>(null);
   const vmRef = useRef<Vm | null>(null);
-  const rendererRef = useRef<StageRenderer | null>(null);
+  const rendererRef = useRef<DomStageRenderer | null>(null);
   const choiceResolve = useRef<((i: number) => void) | null>(null);
   const movieResolve = useRef<(() => void) | null>(null);
   const startOptsRef = useRef<{ snapshot?: Snapshot; pc?: number; menu?: string | null }>({});
@@ -77,7 +77,6 @@ export default function App() {
   const [fullscreen, setFullscreen] = useState(false);
   const [translations, setTranslations] = useState<TranslationData | null>(null);
   const [language, setLanguage] = useState<Language>("ja");
-  const [dialogue, setDialogue] = useState<{ speaker: string | null; lines: string[] } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -215,8 +214,9 @@ export default function App() {
           audio,
           saves,
         };
-        if (canvasRef.current) {
-          rendererRef.current = new StageRenderer(canvasRef.current, assets, vm);
+        if (stageRef.current) {
+          rendererRef.current?.destroy();
+          rendererRef.current = new DomStageRenderer(stageRef.current, assets, vm);
         }
         setReady(true);
         if (startedRef.current) {
@@ -229,6 +229,8 @@ export default function App() {
     })();
     return () => {
       cancelled = true;
+      rendererRef.current?.destroy();
+      rendererRef.current = null;
     };
   }, []);
 
@@ -258,29 +260,6 @@ export default function App() {
     return () => document.removeEventListener("fullscreenchange", onFs);
   }, []);
 
-  useEffect(() => {
-    if (language !== "en") {
-      setDialogue(null);
-      return;
-    }
-    const update = () => {
-      const vm = vmRef.current;
-      if (!vm) return;
-      const lines = vm.overlayVisible() ? vm.textLines.map((line) => vm.translateLine(line)) : [];
-      const next = lines.length ? { speaker: vm.speakerText(), lines } : null;
-      setDialogue((prev) => {
-        if (!next && !prev) return prev;
-        if (next && prev && next.speaker === prev.speaker && next.lines.join("\n") === prev.lines.join("\n")) {
-          return prev;
-        }
-        return next;
-      });
-    };
-    update();
-    const id = window.setInterval(update, 120);
-    return () => window.clearInterval(id);
-  }, [language, started]);
-
   const begin = async () => {
     const vm = vmRef.current;
     if (!vm || startingRef.current) return;
@@ -292,19 +271,19 @@ export default function App() {
   };
 
   const logical = (e: { clientX: number; clientY: number }) => {
-    const c = canvasRef.current;
+    const c = stageRef.current;
     if (!c) return { x: 0, y: 0 };
     const r = c.getBoundingClientRect();
     return { x: ((e.clientX - r.left) * 800) / r.width, y: ((e.clientY - r.top) * 600) / r.height };
   };
 
-  const onPointer = (e: React.PointerEvent<HTMLCanvasElement>) => {
+  const onPointer = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!started || choices || movie) return;
     const p = logical(e);
     void vmRef.current?.click(p.x, p.y);
   };
 
-  const onMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+  const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!started || choices || movie) return;
     const p = logical(e);
     vmRef.current?.hover(p.x, p.y);
@@ -327,6 +306,10 @@ export default function App() {
         void vm.keyEnter();
       } else if (e.key === "Escape") {
         void vm.advanceSpecial("escape");
+      } else if (e.key === "ArrowRight" && vm.galleryStep(1)) {
+        e.preventDefault();
+      } else if (e.key === "ArrowLeft" && vm.galleryStep(-1)) {
+        e.preventDefault();
       } else if (e.key === "Control") {
         if (!skip) {
           vm.toggleSkip();
@@ -383,7 +366,10 @@ export default function App() {
   };
 
   const gosub = (label: string) => {
-    vmRef.current?.requestGosub(label);
+    const vm = vmRef.current;
+    if (!vm) return;
+    if (label === "*backtitle_dlg") vm.requestGosub(label);
+    else vm.openMenu(label);
   };
 
   const toggleLanguage = () => {
@@ -404,9 +390,9 @@ export default function App() {
     <div className="app">
       <div className="stage-wrap">
         <div className="stage-box">
-        <canvas
-          ref={canvasRef}
-          className="stage"
+        <div className="stage-surface" ref={stageRef} />
+        <div
+          className="stage-input"
           onPointerDown={onPointer}
           onPointerMove={onMove}
           onContextMenu={(e) => {
@@ -418,11 +404,6 @@ export default function App() {
             else setBacklog([...vm.history]);
           }}
         />
-        {language === "en" && dialogue && (
-          <div className="english-dialogue">
-            <div className="body">{dialogue.lines.join("\n")}</div>
-          </div>
-        )}
         {!started && (
           <div
             className="veil start-veil"
@@ -489,7 +470,9 @@ export default function App() {
             <div className="backlog-body">
               {backlog.length === 0 && <p className="hint">まだログがありません。</p>}
               {backlog.map((line, i) => (
-                <p key={i}>{line}</p>
+                <p key={i}>
+                  {language === "en" ? (vmRef.current?.translateLine(line) ?? line) : line}
+                </p>
               ))}
             </div>
           </div>

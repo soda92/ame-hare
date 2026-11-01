@@ -2,24 +2,29 @@
 
 ## Stage
 
-The logical stage is **800×600** (`mode800`). The canvas is scaled to fit the
-window while keeping 4:3 and letterboxing as needed. All game coordinates are
-logical 800×600.
+The logical stage is **800×600** (`mode800`). It is a DOM stack scaled to fit
+the window at 4:3. The stage box is a CSS inline-size container, so one logical
+pixel is `0.125cqw`; all positions and sizes use that unit and text is rendered
+at the current display resolution instead of being rasterised into an 800×600
+canvas.
 
 Draw order:
 
 1. background (image or black; crossfade when `bg` has a duration)
 2. standing images (`ld l/c/r`) at the `underline` baseline (504)
-3. window frame sprites 108/109
-4. `setwindow` background image (`mw.bmp`, alpha-split)
-5. dialogue text
-6. all other sprites in descending number order (face, name plate, system
-   buttons, menus, title buttons)
-7. `btn` method-1 images
-8. screen shake offset (`quake`)
+3. sprites 100+ (background CGs and other behind-window art)
+4. window frame sprites 108/109
+5. `setwindow` background image (`mw.bmp`, alpha-split)
+6. dialogue text (HTML)
+7. sprites below 100 (face, name plate, system buttons, menus, title buttons)
+8. `btn` method-1 images
+9. screen shake offset (`quake`, applied to the whole DOM stage)
 
-Text is drawn on the canvas with fixed pitch from `setwindow`:
-`x + column * pitchX`, `y + row * pitchY`. ASCII advances by half pitch.
+Bitmap sprites are decoded to alpha-corrected cells and rendered as images;
+`:s` string sprites and the dialogue body are real text nodes. The Japanese
+text uses the `setwindow` fixed pitch, while English uses normal wrapping. The
+window frame sits *behind* the `mw.bmp` interior (the game sets `windowback`),
+which is why the dialogue is readable over the dark lower frame.
 
 ## Native UI
 
@@ -47,6 +52,15 @@ by `bg`, `ld`, `lsp`/`lsph`, or `btndef`, mirroring `filelog`. A seen tag select
 the thumbnail; an unseen tag selects the dummy. Since the dummy has one cell,
 `cellcheckspbtn` also refuses to create a hotspot for it.
 
+Gallery and scene-replay thumbnails have two cells: the script normally shows
+the grayscale cell and switches to the colour cell on hover. This engine keeps
+the colour cell for every unlocked thumbnail, including after the pointer
+leaves, so the galleries stay coloured.
+
+In the full-screen gallery viewer, **← / →** move to the previous / next seen
+CG (wrapping across pages and skipping locked entries); clicking still returns
+to the grid.
+
 Scene replay uses label access instead: every label the VM reaches is added to
 `amehare.seen.v1`, and `lchk` tests that set. Both sets are per-browser and
 persist across reloads.
@@ -59,11 +73,12 @@ For testing:
 - from DevTools, `__amehare.vm.markFileSeen("EV2-3.bmp")` unlocks one CG.
 
 With translations.json present, **English / 日本語** (or **L**) switches the
-dialogue to English. The canvas text is hidden and a DOM overlay over the text
-window shows the translated block; name plates and `:s` string sprites are
-translated from the `sprites` map. Clicks pass through the overlay. The game's own system buttons (sprites 80–88 and the
-voice icon 106) are hit-tested as hotspots during dialogue, so clicking them
-opens the same menus.
+dialogue to English. The dialogue block becomes a light paper panel with normal
+HTML wrapping; the scripted name sprite is hidden and the speaker is rendered
+at the top of the panel. Other `:s` string sprites are translated from the
+`sprites` map. Clicks pass through the text layer. The game's own system
+buttons (sprites 80–88 and the voice icon 106) are hit-tested as hotspots during
+dialogue, so clicking them opens the same menus.
 
 The start veil doubles as the audio-unlock gesture. On a normal launch it says
 **はじめる / Start**; after a refresh with URL state it says

@@ -121,6 +121,10 @@ export class Vm {
   private globalsTimer: number | null = null;
   private lastLabel = "";
   private lineLabels: string[] = [];
+  private galleryView = false;
+  private galleryPage = 0;
+  private galleryIndex = 0;
+  private galleryFiles = new Map<string, string | null>();
   private storyPc: number;
   private storyLabel = "";
   private menuLabel: string | null = null;
@@ -172,6 +176,7 @@ export class Vm {
     }
     this.storyPc = this.pc;
     this.storyLabel = this.labelForPc(this.pc);
+    this.updateGalleryPosition(this.storyLabel);
     this.cmdQueue = [];
     this.callStack = [];
     this.loops = [];
@@ -182,6 +187,11 @@ export class Vm {
       this.menuResumePc = this.pc;
       if (this.isExtrasMenu(menu)) {
         this.clearStageForExtras();
+        this.menuLabel = menu;
+        this.menuReturnDepth = this.callStack.length;
+        this.pendingGosub = menu;
+      } else if (this.isSystemMenu(menu) && this.isMenuScreen()) {
+        this.clearStaleSprites();
         this.menuLabel = menu;
         this.menuReturnDepth = this.callStack.length;
         this.pendingGosub = menu;
@@ -560,6 +570,14 @@ export class Vm {
     this.scheduleGlobals();
   }
 
+  private isThumbnailSpec(spec: ImageSpec): boolean {
+    return spec.mode !== "s" && spec.cells >= 2 && /^te/i.test(spec.file);
+  }
+
+  private thumbnailCell(sp: SpriteState): boolean {
+    return this.isThumbnailSpec(sp.spec);
+  }
+
   private enterButton(b: ButtonDef) {
     if (b.kind === "sprite" && b.spriteNo !== undefined) {
       const sp = this.sprites.get(b.spriteNo);
@@ -578,7 +596,7 @@ export class Vm {
       const sp = this.sprites.get(b.spriteNo);
       if (sp) {
         sp.visible = true;
-        sp.cell = 0;
+        sp.cell = this.thumbnailCell(sp) ? 1 : 0;
       }
     } else if (b.kind === "exbtn") {
       if (this.exbtnDefault) this.applyControl(this.exbtnDefault);
@@ -1343,13 +1361,14 @@ export class Vm {
 
   private setSprite(no: number, spec: ImageSpec, x: number, y: number, visible: boolean) {
     const old = this.sprites.get(no);
+    const keepCell = old && old.spec.file === spec.file ? old.cell : 0;
     this.sprites.set(no, {
       no,
       spec,
       x,
       y,
       visible,
-      cell: old && old.spec.file === spec.file ? old.cell : 0,
+      cell: this.isThumbnailSpec(spec) ? 1 : keepCell,
     });
     void this.assets
       .loadSpec(spec)
@@ -1403,7 +1422,7 @@ export class Vm {
         const sp = this.sprites.get(a.value);
         if (sp) {
           sp.visible = true;
-          sp.cell = cell;
+          sp.cell = cell === 0 && this.thumbnailCell(sp) ? 1 : cell;
         }
       } else if (c === "M" || c === "m") {
         i++;
@@ -1457,7 +1476,21 @@ export class Vm {
       throw new Error(`label not found: ${token}`);
     }
     this.lastLabel = label;
+    this.updateGalleryPosition(label);
     return idx;
+  }
+
+  private updateGalleryPosition(label: string) {
+    const m = /^ga_v(\d+)_(\d+)/i.exec(label);
+    if (m) {
+      this.galleryView = true;
+      this.galleryPage = Number(m[1]);
+      this.galleryIndex = Number(m[2]);
+      return;
+    }
+    if (/^(ga_|gm_|om_|tm_|title|rm_|rp_|mm_|am_)/i.test(label)) {
+      this.galleryView = false;
+    }
   }
 
   private buildLineLabels() {
@@ -1900,6 +1933,25 @@ export class Vm {
     );
   }
 
+  private isSystemMenu(menu: string): boolean {
+    return ["save_menu", "load_menu", "config_menu"].includes(menu.toLowerCase());
+  }
+
+  private isMenuScreen(): boolean {
+    return /^(opening|title|tm_|omake|gm_|rm_|mm_|am_|rp_)/i.test(
+      this.lastLabel || this.storyLabel,
+    );
+  }
+
+  private clearStaleSprites() {
+    this.sprites.clear();
+    this.spriteDims.clear();
+    this.buttons = [];
+    this.hoverButton = null;
+    this.btndefFile = null;
+    this.btndefImage = null;
+  }
+
   private clearStageForExtras() {
     this.sprites.clear();
     this.spriteDims.clear();
@@ -1928,6 +1980,89 @@ export class Vm {
   openExtras() {
     this.clearStageForExtras();
     this.requestGosub("*omake_menu");
+  }
+
+  /** Move between full-screen CG previews with the arrow keys. */
+  galleryStep(delta: number): boolean {
+    if (!this.galleryView) return false;
+    const perPage = 12;
+    const pages = 11;
+    let page = this.galleryPage;
+    let index = this.galleryIndex;
+    for (let n = 0; n < perPage * pages; n++) {
+      index += delta;
+      if (index >= perPage) {
+        index = 0;
+        page = (page + 1) % pages;
+      } else if (index < 0) {
+        index = perPage - 1;
+        page = (page + pages - 1) % pages;
+      }
+      const file = this.galleryFile(page, index);
+      if (!file || !this.seenFiles.has(this.normalizeAssetName(file))) continue;
+      this.galleryPage = page;
+      this.galleryIndex = index;
+      this.vars[22] = page;
+      this.showGalleryImage(file);
+      return true;
+    }
+    return false;
+  }
+
+  private galleryFile(page: number, index: number): string | null {
+    const key = `${page}:${index}`;
+    if (this.galleryFiles.has(key)) return this.galleryFiles.get(key) ?? null;
+    let file: string | null = null;
+    const start = this.script.labels[`ga_v${page}_${index}`];
+    if (start !== undefined) {
+      for (let i = start + 1; i < this.script.lines.length; i++) {
+        const line = this.script.lines[i];
+        if (line.kind === "label") break;
+        const raw = line.raw.trim();
+        const name = commandName(raw);
+        if (name !== "bg" && name !== "lsp" && name !== "lsph") continue;
+        const rest = raw.slice(raw.indexOf(name) + name.length).trim();
+        const args = splitArgs(rest);
+        const expr = name === "bg" ? args[0] : args[1];
+        if (!expr) continue;
+        const candidate =
+          name === "bg"
+            ? unquote(expr)
+            : parseSpec(unquote(expr), this.script.define.defaultMode).file;
+        if (candidate && /\.(bmp|png)$/i.test(candidate)) {
+          file = candidate;
+          break;
+        }
+      }
+    }
+    this.galleryFiles.set(key, file);
+    return file;
+  }
+
+  private showGalleryImage(file: string) {
+    this.bg = file;
+    this.bgFrom = null;
+    this.bgTransitionDuration = 0;
+    this.noteImage(file);
+    // Keep the gallery grid/UI sprites: *ga_v_end re-shows 47-50. Only drop
+    // full-screen CG sprites used by animated view entries.
+    for (const no of [...this.sprites.keys()]) {
+      if (no >= 100 && no !== 108 && no !== 109) this.sprites.delete(no);
+    }
+    this.hoverButton = null;
+    this.hooks.requestRender();
+  }
+
+  /**
+   * Toolbar entry into a scripted menu. Menus opened from the title/gallery
+   * expect the previous screen's sprites to be gone (the original title menu
+   * does `csp -1`); menus opened during the story deliberately leave the
+   * scene sprites in place.
+   */
+  openMenu(label: string) {
+    const menu = normalizeLabelArg(label);
+    if (this.menuLabel !== null || this.isMenuScreen()) this.clearStaleSprites();
+    this.requestGosub(menu);
   }
 
   requestGosub(label: string) {

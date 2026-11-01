@@ -78,13 +78,15 @@ runs.
 - Toolbar **English / 日本語** button or **L** switches language.
 - The choice is persisted in `localStorage` (`amehare.lang.v1`).
 - In English mode:
-  - the canvas dialogue text is hidden;
-  - a DOM overlay sits over the game’s text window and shows the translated
-    block with a smaller proportional font and wrapping;
-  - the name plate and place-name string sprites are rendered from the
-    `sprites` map;
+  - the DOM dialogue block uses the translated line map, a proportional font
+    and normal wrapping;
+  - the scripted name sprite is hidden and the translated speaker is rendered
+    at the top of the dialogue panel;
+  - other `:s` string sprites (place names, menu captions) are rendered from
+    the `sprites` map;
   - `csel` choice buttons use the translated `text` entries.
-- The overlay has `pointer-events: none`, so clicks still advance the game.
+- The dialogue layer has `pointer-events: none`, so clicks still advance the
+  game.
 - Missing translations fall back to Japanese line by line.
 
 ## Limitations
@@ -93,8 +95,8 @@ runs.
   honorifics can vary; use the sidecar for manual corrections.
 - UI artwork with baked-in Japanese (title/menu button images, some config
   labels) is not translated.
-- Very long English blocks are clipped by the overlay’s `max-height`. The
-  overlay grows upward from the text window; typical 1–3 line blocks fit.
+- Very long English blocks are clipped by the dialogue panel’s `max-height`.
+  The panel grows upward from the text window; typical 1–3 line blocks fit.
 - Dynamic save labels translate the chapter-title part; location/time suffixes
   may remain Japanese.
 - Title/menu screens reached before starting a game still use Japanese button

@@ -7,7 +7,7 @@
 - `CISCENE.DAT` XOR-0x84 / CP932 decoded to UTF-8.
 - Script VM: variables, expressions, conditions, loops, calls, tables,
   choices, traps, waits, menus, saves.
-- 800×600 stage: backgrounds, standing images, sprites, cells, alpha masks,
+- 800×600 DOM stage: backgrounds, standing images, sprites, cells, alpha masks,
   colour-key transparency, text window, typewriter, name/face sprites, shakes.
 - `:s` string sprites (place names, save labels, character-select captions).
 - Sprite buttons, complex `exbtn` buttons, `btn` method-1 images,
@@ -15,12 +15,13 @@
 - The original title, save, load, configuration, omake, music, CG gallery,
   scene replay, and character-select screens.
 - Gallery thumbnails and scene-replay unlock checks (`lchk`) with persistent
-  label access.
+  label access; unlocked thumbnails stay in their colour cell, and the
+  full-screen gallery viewer supports ← / → navigation.
 - Colour backgrounds (`bg #RRGGBB`) and `bgmonce`.
 - Static audit (`cmd/audit`) with zero errors / zero missing assets, and CI for
   Go tests/vet plus the frontend build.
 - English machine-translation sidecar (`cmd/translate`): 7,159 dialogue/choice
-  strings and 230 string sprites, with a JA/EN toggle and DOM dialogue overlay.
+  strings and 230 string sprites, with a JA/EN toggle and HTML dialogue panel.
 - BGM, SE, and voice; IMA ADPCM decoded in the browser (verified against
   ffmpeg).
 - Opening MPEG movie transcoded to MP4 and played in the stage.
@@ -45,7 +46,7 @@
   scene/command snapshot still restores to that screen.
 - English is a machine-translated draft; UI artwork with baked-in Japanese
   (title/menu button images) is not translated. Very long English blocks can be
-  clipped by the overlay height.
+  clipped by the dialogue panel height.
 - The movie requires ffmpeg at extraction time.
 
 ## Next
