@@ -10,7 +10,8 @@ canvas.
 
 Draw order:
 
-1. background (image or black; crossfade when `bg` has a duration)
+1. background (image or black; crossfade when `bg` has a duration; like
+   NScripter, `bg` clears all three standing images)
 2. standing images (`ld l/c/r`) at the `underline` baseline (504)
 3. sprites 100+ (background CGs and other behind-window art)
 4. window frame sprites 108/109

@@ -895,6 +895,8 @@ export class Vm {
         const duration = num(2, 0);
         this.bgFrom = this.bg;
         this.bg = file;
+        // ONScripter's bg command removes all standing images.
+        this.tachi = [null, null, null];
         if (duration > 0 && effect > 0) {
           this.bgTransitionStart = performance.now();
           this.bgTransitionDuration = duration;
@@ -1677,6 +1679,44 @@ export class Vm {
     };
   }
 
+  /**
+   * Old snapshots can contain a standing image from before a bg command.
+   * OScripter's bg removes all tachi; replay the tachi state since the most
+   * recent bg so restored snapshots do not show a residual character.
+   */
+  private reconcileTachi(pc: number) {
+    let bgPc = -1;
+    for (let i = pc - 1; i >= 0; i--) {
+      const line = this.script.lines[i];
+      if (line.kind === "command" && commandName(line.raw.trim()) === "bg") {
+        bgPc = i;
+        break;
+      }
+    }
+    if (bgPc < 0) return;
+    const active = [false, false, false];
+    for (let i = bgPc + 1; i < pc; i++) {
+      const line = this.script.lines[i];
+      if (line.kind !== "command") continue;
+      const raw = line.raw.trim();
+      const name = commandName(raw);
+      if (name !== "ld" && name !== "cl") continue;
+      const args = splitArgs(raw.slice(raw.indexOf(name) + name.length).trim());
+      if (name === "ld") {
+        const idx = slotIndex(args[0] ?? "");
+        if (idx >= 0) active[idx] = true;
+      } else {
+        const slot = (args[0] ?? "").trim().toLowerCase();
+        if (slot === "a") active.fill(false);
+        else {
+          const idx = slotIndex(slot);
+          if (idx >= 0) active[idx] = false;
+        }
+      }
+    }
+    for (let i = 0; i < 3; i++) if (!active[i]) this.tachi[i] = null;
+  }
+
   async restoreSnapshot(s: Snapshot) {
     this.stopTyping();
     this.stopAuto();
@@ -1733,6 +1773,7 @@ export class Vm {
         );
         this.buttons.push({ no: b.no, kind: "rect", rect: b.rect, src: b.src, image: c });
       } else {
+        if (b.spriteNo === undefined || !this.sprites.has(b.spriteNo)) continue;
         this.buttons.push({ no: b.no, kind: b.kind, spriteNo: b.spriteNo, ctl: b.ctl });
       }
     }
@@ -1743,6 +1784,7 @@ export class Vm {
     this.audio.setVoiceVolume(s.audio.voiceVolume ?? this.script.define.defVoiceVol);
     this.bgmFile = s.audio.bgm;
     if (s.audio.bgm) void this.audio.playBgm(s.audio.bgm).catch(() => undefined);
+    this.reconcileTachi(s.pc);
     this.storyPc = s.pc;
     this.storyLabel = this.labelForPc(s.pc);
     this.seedSaveLabels();
@@ -2378,6 +2420,19 @@ function readInt(s: string, pos: number): { value: number; pos: number } {
   let n = "";
   while (i < s.length && /[0-9]/.test(s[i])) n += s[i++];
   return { value: parseInt(n || "0", 10), pos: i };
+}
+
+function slotIndex(slot: string): number {
+  switch (slot.trim().toLowerCase()) {
+    case "l":
+      return 0;
+    case "c":
+      return 1;
+    case "r":
+      return 2;
+    default:
+      return -1;
+  }
 }
 
 function normalizeLabelArg(s: string): string {

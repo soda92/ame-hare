@@ -27,7 +27,8 @@
 - Opening MPEG movie transcoded to MP4 and played in the stage.
 - Backlog, auto mode, skip mode, mute, fullscreen, debug overlay.
 - URL + snapshot persistence: refresh restores the scene, text, menu, stage,
-  variables, and audio.
+  variables, and audio. Restored snapshots reconcile standing images against
+  the last `bg` and drop stale menu hotspots.
 - Save/load with 48 slots, chapter/location labels, timestamps, global
   settings.
 
