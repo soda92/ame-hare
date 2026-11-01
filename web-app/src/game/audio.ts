@@ -214,17 +214,23 @@ export class AudioEngine {
     return { bgm: this.bgmVolume, se: this.seVolume, voice: this.voiceVolume };
   }
 
-  async playBgm(file: string) {
+  async playBgm(file: string, loop = true) {
     const ctx = this.ensure();
     const buf = await this.load(file);
     this.stopBgm(0);
     const src = ctx.createBufferSource();
     src.buffer = buf;
-    src.loop = true;
+    src.loop = loop;
     src.connect(this.bgmGain!);
     src.start();
     this.bgmSource = src;
     this.bgmName = file;
+    src.onended = () => {
+      if (this.bgmSource === src) {
+        this.bgmSource = null;
+        this.bgmName = null;
+      }
+    };
   }
 
   stopBgm(fadeMs = 0) {

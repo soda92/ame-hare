@@ -104,8 +104,11 @@ export class StageRenderer {
     const ctx = this.ctx;
     ctx.save();
     ctx.globalAlpha = alpha;
-    if (!file || file.toLowerCase() === "black") {
-      ctx.fillStyle = "#000";
+    if (!file || file.toLowerCase() === "black" || file.toLowerCase() === "white") {
+      ctx.fillStyle = file?.toLowerCase() === "white" ? "#fff" : "#000";
+      ctx.fillRect(0, 0, 800, 600);
+    } else if (/^#[0-9a-fA-F]{6}$/.test(file)) {
+      ctx.fillStyle = file;
       ctx.fillRect(0, 0, 800, 600);
     } else {
       const img = this.getRaw(file);

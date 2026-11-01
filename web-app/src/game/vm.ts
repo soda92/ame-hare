@@ -106,6 +106,8 @@ export class Vm {
 
   history: string[] = [];
   lookbackOn = true;
+  seenLabels = new Set<string>();
+  private seenTimer: number | null = null;
 
   private waiter: ((ev: InputEvent) => void) | null = null;
   private waitKind: WaitKind = "none";
@@ -147,6 +149,7 @@ export class Vm {
     this.audio.setVoiceVolume(script.define.defVoiceVol);
     this.loadGlobals();
     this.seedSaveLabels();
+    this.loadSeenLabels();
   }
 
   /** Start execution, optionally restoring a snapshot and/or reopening a menu. */
@@ -211,6 +214,7 @@ export class Vm {
         this.finish();
         return;
       }
+      if (line.kind === "label" && line.label) this.markLabel(line.label);
       try {
         if (line.kind === "text") {
           await this.execTextBlock();
@@ -1069,6 +1073,14 @@ export class Vm {
         }
         break;
       }
+      case "bgmonce": {
+        const file = this.evalStr(arg(0));
+        if (file) {
+          void this.audio.playBgm(file, false).catch(() => undefined);
+          this.bgmFile = file;
+        }
+        break;
+      }
       case "bgmstop": {
         this.audio.stopBgm(this.script.define.bgmFadeOut);
         this.bgmFile = null;
@@ -1176,6 +1188,10 @@ export class Vm {
       }
       case "menu_full":
         void document.documentElement.requestFullscreen?.().catch(() => undefined);
+        break;
+      case "menu_automode":
+        this.autoMode = true;
+        this.scheduleAuto();
         break;
       case "menu_window":
         if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
@@ -1556,6 +1572,11 @@ export class Vm {
   private evalStr(expr: string): string {
     const s = expr.trim();
     if (!s) return "";
+    // NScripter file-log form: ("tag")"first""second". The tag is the CG
+    // filename; "first" is the thumbnail shown once it has been logged and
+    // "second" is the dummy used for unseen CGs. We always take the thumbnail.
+    const tagged = /^\(\s*"((?:[^"\\]|\\.)*)"\s*\)\s*"((?:[^"\\]|\\.)*)"\s*"((?:[^"\\]|\\.)*)"\s*$/.exec(s);
+    if (tagged) return tagged[2].replace(/\\"/g, '"').replace(/\\\\/g, "\\");
     if (s.startsWith('"')) return unquote(s);
     if (s.startsWith("$")) return this.getStr(this.strIndex(s));
     return s;
@@ -1706,6 +1727,37 @@ export class Vm {
     for (let i = GLOBAL_BORDER; i < this.vars.length; i++) if (this.vars[i]) vars[i] = this.vars[i];
     for (let i = GLOBAL_BORDER; i < this.strs.length; i++) if (this.strs[i]) strs[i] = this.strs[i];
     this.saves.saveGlobals({ vars, strs });
+  }
+
+  hasSeenLabel(label: string): boolean {
+    return this.seenLabels.has(label.toLowerCase());
+  }
+
+  private markLabel(label: string) {
+    const key = label.toLowerCase();
+    if (this.seenLabels.has(key)) return;
+    this.seenLabels.add(key);
+    if (this.seenTimer !== null) return;
+    this.seenTimer = window.setTimeout(() => {
+      this.seenTimer = null;
+      try {
+        localStorage.setItem("amehare.seen.v1", JSON.stringify([...this.seenLabels]));
+      } catch {
+        /* ignore quota */
+      }
+    }, 500);
+  }
+
+  private loadSeenLabels() {
+    try {
+      const raw = localStorage.getItem("amehare.seen.v1");
+      if (raw) {
+        const arr = JSON.parse(raw) as string[];
+        for (const x of arr) if (typeof x === "string") this.seenLabels.add(x.toLowerCase());
+      }
+    } catch {
+      /* ignore */
+    }
   }
 
   // ---------------------------------------------------------------- UI hooks
@@ -1940,6 +1992,17 @@ class ExprParser {
 
   private parsePrimary(): Value {
     this.ws();
+    if (this.s.startsWith("lchk", this.pos)) {
+      const after = this.pos + 4;
+      if (after >= this.s.length || this.s[after] === " " || this.s[after] === "\t" || this.s[after] === "*") {
+        this.pos = after;
+        this.ws();
+        if (this.s[this.pos] === "*") this.pos++;
+        let n = "";
+        while (this.pos < this.s.length && /[A-Za-z0-9_]/.test(this.s[this.pos])) n += this.s[this.pos++];
+        return this.vm.hasSeenLabel(n) ? 1 : 0;
+      }
+    }
     const c = this.s[this.pos];
     if (c === undefined) return 0;
     if (c === "(") {
@@ -2041,11 +2104,11 @@ const KNOWN = new Set([
   "getcursorpos", "print", "bg", "ld", "cl", "lsp", "lsph", "csp", "vsp",
   "msp", "amsp", "cell", "spstr", "spbtn", "cellcheckspbtn", "exbtn",
   "cellcheckexbtn", "exbtn_d", "btndef", "btn", "btntime", "btnwait", "btnwait2",
-  "spclclk", "csel", "cselgoto", "bgm", "bgmstop", "dwave", "dwavestop",
+  "spclclk", "csel", "cselgoto", "bgm", "bgmonce", "bgmstop", "dwave", "dwavestop",
   "mp3vol", "bgmvol", "sevol", "voicevol", "stop", "delay", "resettimer",
   "waittimer", "quake", "quakex", "quakey", "flushout", "trap", "skipoff",
   "saveoff", "saveon", "mpegplay", "systemcall", "isfull", "menu_full",
-  "menu_window", "lookbackflush", "lookbackoff", "lookbackon", "savetime",
+  "menu_automode", "menu_window", "lookbackflush", "lookbackoff", "lookbackon", "savetime",
   "savegame", "savegame2", "loadgame", "end",
 ]);
 
