@@ -69,6 +69,38 @@ body {
   overflow: hidden;
 }
 
+.english-dialogue {
+  position: absolute;
+  left: 23.875%;
+  width: 62.5%;
+  bottom: 2.5%;
+  min-height: 12.5%;
+  max-height: 42%;
+  overflow: hidden;
+  pointer-events: none;
+  background: rgba(255, 250, 244, 0.97);
+  border: 1px solid rgba(80, 60, 40, 0.25);
+  border-radius: 10px;
+  padding: 8px 14px 10px;
+  color: #372c19;
+  font-family: "Noto Sans", "Noto Sans JP", system-ui, sans-serif;
+  font-size: clamp(11px, 1.35vw, 17px);
+  line-height: 1.35;
+  z-index: 4;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+
+.english-dialogue .speaker {
+  font-weight: 700;
+  color: #8a4b2a;
+  margin-bottom: 3px;
+  font-size: 0.95em;
+}
+
+.english-dialogue .body {
+  white-space: pre-wrap;
+}
+
 .start-veil {
   text-align: center;
 }

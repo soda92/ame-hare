@@ -87,7 +87,7 @@ export class AssetStore {
       let x = 0;
       for (const ch of text) {
         ctx.fillText(ch, x, 0);
-        x += ch.charCodeAt(0) < 0x80 ? Math.max(1, Math.floor(font.pitchX / 2)) : font.pitchX;
+        x += ch.charCodeAt(0) < 0x80 ? Math.max(1, ctx.measureText(ch).width) : font.pitchX;
       }
       const w = Math.max(1, x);
       const h = Math.max(1, font.pitchY);
@@ -101,7 +101,7 @@ export class AssetStore {
       let x2 = 0;
       for (const ch of text) {
         ctx2.fillText(ch, x2, 0);
-        x2 += ch.charCodeAt(0) < 0x80 ? Math.max(1, Math.floor(font.pitchX / 2)) : font.pitchX;
+        x2 += ch.charCodeAt(0) < 0x80 ? Math.max(1, ctx2.measureText(ch).width) : font.pitchX;
       }
       maxW = Math.max(maxW, w);
       cells.push(canvas);

@@ -8,6 +8,7 @@ import type {
   SpriteState,
   TachiState,
   TextWindow,
+  TranslationData,
   UrlState,
   VmHooks,
 } from "./types";
@@ -106,6 +107,8 @@ export class Vm {
 
   history: string[] = [];
   lookbackOn = true;
+  translations: TranslationData | null = null;
+  language: "ja" | "en" = "ja";
   seenLabels = new Set<string>();
   private seenTimer: number | null = null;
 
@@ -1048,7 +1051,7 @@ export class Vm {
       case "csel": {
         const choices: Choice[] = [];
         for (let i = 0; i + 1 < args.length; i += 2) {
-          choices.push({ text: this.evalStr(args[i]), label: normalizeLabelArg(args[i + 1]) });
+          choices.push({ text: this.translateLine(this.evalStr(args[i])), label: normalizeLabelArg(args[i + 1]) });
         }
         if (!choices.length) break;
         this.stopTyping();
@@ -1733,6 +1736,35 @@ export class Vm {
     return this.seenLabels.has(label.toLowerCase());
   }
 
+  setTranslations(t: TranslationData | null) {
+    this.translations = t;
+    this.hooks.requestRender();
+  }
+
+  setLanguage(lang: "ja" | "en") {
+    this.language = lang;
+    this.stopTyping();
+    this.revealed = this.totalChars();
+    this.typing = false;
+    this.hooks.requestRender();
+  }
+
+  translateLine(text: string): string {
+    if (this.language !== "en" || !this.translations) return text;
+    return this.translations.text[text] ?? this.translations.text[text.trim()] ?? text;
+  }
+
+  translateSprite(text: string): string {
+    if (this.language !== "en" || !this.translations) return text;
+    return this.translations.sprites[text] ?? this.translations.sprites[text.trim()] ?? text;
+  }
+
+  speakerText(): string | null {
+    const sp = this.sprites.get(91);
+    if (!sp || sp.spec.mode !== "s") return null;
+    return this.translateSprite(sp.spec.file);
+  }
+
   private markLabel(label: string) {
     const key = label.toLowerCase();
     if (this.seenLabels.has(key)) return;
@@ -1836,6 +1868,14 @@ export class Vm {
 
   waitKindText(): boolean {
     return this.waitKind === "text" || this.waitKind === "delay" || this.waitKind === "timer";
+  }
+
+  menuOpen(): boolean {
+    return this.menuLabel !== null;
+  }
+
+  overlayVisible(): boolean {
+    return this.textVisible && this.waitKind !== "button";
   }
 
   persistState() {

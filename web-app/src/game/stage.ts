@@ -24,14 +24,20 @@ export class StageRenderer {
     this.vm = vm;
   }
 
-  private getSpec(spec: ImageSpec): LoadedImage | null {
-    const key = specKey(spec);
+  private getSpec(spec: ImageSpec | undefined | null): LoadedImage | null {
+    if (!spec || !spec.file) return null;
+    let eff = spec;
+    if (this.vm.language === "en" && spec.mode === "s") {
+      const text = this.vm.translateSprite(spec.file);
+      if (text !== spec.file) eff = { ...spec, file: text };
+    }
+    const key = specKey(eff);
     const hit = this.specCache.get(key);
     if (hit) return hit;
     if (!this.pending.has(key)) {
       this.pending.add(key);
       this.assets
-        .loadSpec(spec)
+        .loadSpec(eff)
         .then((li) => this.specCache.set(key, li))
         .catch(() => undefined)
         .finally(() => this.pending.delete(key));
@@ -137,7 +143,7 @@ export class StageRenderer {
   private drawTachi() {
     for (let i = 0; i < 3; i++) {
       const t = this.vm.tachi[i];
-      if (!t || !t.visible) continue;
+      if (!t || !t.visible || !t.spec) continue;
       const img = this.getSpec(t.spec);
       if (!img) continue;
       const cell = img.cells[Math.min(t.spec.cells - 1, 0)];
@@ -150,7 +156,7 @@ export class StageRenderer {
     for (const sp of entries) {
       const isWindowFrame = sp.no === 108 || sp.no === 109;
       if (isWindowFrame !== beforeWindow) continue;
-      if (!sp.visible) continue;
+      if (!sp.visible || !sp.spec) continue;
       const img = this.getSpec(sp.spec);
       if (!img) continue;
       const cell = img.cells[Math.max(0, Math.min(img.cells.length - 1, sp.cell))];
@@ -192,6 +198,7 @@ export class StageRenderer {
 
   private drawText() {
     const vm = this.vm;
+    if (vm.language === "en") return;
     if (!vm.textVisible || vm.textLines.length === 0) return;
     const w = vm.textWindow;
     const ctx = this.ctx;

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { Choice, Manifest, ScriptLine, Snapshot, UrlState } from "./game/types";
+import type { Choice, Language, Manifest, ScriptLine, Snapshot, TranslationData, UrlState } from "./game/types";
 import { parseScript } from "./game/script";
 import { AssetStore } from "./game/assets";
 import { AudioEngine } from "./game/audio";
@@ -74,16 +74,32 @@ export default function App() {
   const [auto, setAuto] = useState(false);
   const [skip, setSkip] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
+  const [translations, setTranslations] = useState<TranslationData | null>(null);
+  const [language, setLanguage] = useState<Language>("ja");
+  const [dialogue, setDialogue] = useState<{ speaker: string | null; lines: string[] } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [mres, sres] = await Promise.all([fetch("/api/manifest"), fetch("/api/script")]);
+        const [mres, sres, tres] = await Promise.all([
+          fetch("/api/manifest"),
+          fetch("/api/script"),
+          fetch("/media/translations.json").catch(() => null),
+        ]);
         if (!mres.ok) throw new Error("manifest.json missing; run cmd/extract first");
         if (!sres.ok) throw new Error("script.txt missing; run cmd/extract first");
         const manifest = (await mres.json()) as Manifest;
         const text = await sres.text();
+        let trans: TranslationData | null = null;
+        if (tres && tres.ok) {
+          try {
+            trans = (await tres.json()) as TranslationData;
+          } catch {
+            trans = null;
+          }
+        }
+        setTranslations(trans);
         if (cancelled) return;
         setManifest(manifest);
         const params = new URLSearchParams(window.location.search);
@@ -162,6 +178,15 @@ export default function App() {
           audio,
           saves,
         );
+        vm.setTranslations(trans);
+        let initialLang: Language = "ja";
+        try {
+          if (trans && localStorage.getItem("amehare.lang.v1") === "en") initialLang = "en";
+        } catch {
+          /* ignore */
+        }
+        vm.setLanguage(initialLang);
+        setLanguage(initialLang);
         vmRef.current = vm;
         (window as unknown as { __amehare?: unknown }).__amehare = {
           vm,
@@ -208,6 +233,29 @@ export default function App() {
     document.addEventListener("fullscreenchange", onFs);
     return () => document.removeEventListener("fullscreenchange", onFs);
   }, []);
+
+  useEffect(() => {
+    if (language !== "en") {
+      setDialogue(null);
+      return;
+    }
+    const update = () => {
+      const vm = vmRef.current;
+      if (!vm) return;
+      const lines = vm.overlayVisible() ? vm.textLines.map((line) => vm.translateLine(line)) : [];
+      const next = lines.length ? { speaker: vm.speakerText(), lines } : null;
+      setDialogue((prev) => {
+        if (!next && !prev) return prev;
+        if (next && prev && next.speaker === prev.speaker && next.lines.join("\n") === prev.lines.join("\n")) {
+          return prev;
+        }
+        return next;
+      });
+    };
+    update();
+    const id = window.setInterval(update, 120);
+    return () => window.clearInterval(id);
+  }, [language, started]);
 
   const begin = async () => {
     const vm = vmRef.current;
@@ -264,6 +312,8 @@ export default function App() {
         setAuto(!auto);
       } else if (e.key === "d" || e.key === "D") {
         setDebug((d) => !d);
+      } else if (e.key === "l" || e.key === "L") {
+        toggleLanguage();
       } else if (e.key === "m" || e.key === "M") {
         vm.audio.setMuted(!muted);
         setMuted(!muted);
@@ -273,7 +323,7 @@ export default function App() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [started, ready, skip, auto, muted]);
+  }, [started, ready, skip, auto, muted, language, translations]);
 
   useEffect(() => {
     const onUnload = () => vmRef.current?.persistState();
@@ -304,6 +354,20 @@ export default function App() {
     vmRef.current?.requestGosub(label);
   };
 
+  const toggleLanguage = () => {
+    const vm = vmRef.current;
+    if (!vm) return;
+    const next: Language = language === "ja" ? "en" : "ja";
+    if (next === "en" && !translations) return;
+    vm.setLanguage(next);
+    setLanguage(next);
+    try {
+      localStorage.setItem("amehare.lang.v1", next);
+    } catch {
+      /* ignore */
+    }
+  };
+
   return (
     <div className="app">
       <div className="stage-wrap">
@@ -322,6 +386,11 @@ export default function App() {
             else setBacklog([...vm.history]);
           }}
         />
+        {language === "en" && dialogue && (
+          <div className="english-dialogue">
+            <div className="body">{dialogue.lines.join("\n")}</div>
+          </div>
+        )}
         {!started && (
           <div
             className="veil start-veil"
@@ -407,6 +476,14 @@ export default function App() {
           <button onClick={() => gosub("*save_menu")}>Save</button>
           <button onClick={() => gosub("*load_menu")}>Load</button>
           <button onClick={() => gosub("*config_menu")}>Config</button>
+          <button
+            disabled={!translations}
+            className={language === "en" ? "on" : ""}
+            title={translations ? "Toggle Japanese / English" : "translations.json not found"}
+            onClick={toggleLanguage}
+          >
+            {language === "en" ? "日本語" : "English"}
+          </button>
           <button onClick={() => setBacklog([...(vmRef.current?.history ?? [])])}>Log</button>
           <button
             className={auto ? "on" : ""}

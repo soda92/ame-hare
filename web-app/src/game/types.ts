@@ -154,6 +154,16 @@ export interface ButtonSnapshot {
   src?: { x: number; y: number; w: number; h: number };
 }
 
+export interface TranslationData {
+  version: number;
+  source: string;
+  target: string;
+  text: Record<string, string>;
+  sprites: Record<string, string>;
+}
+
+export type Language = "ja" | "en";
+
 export interface VmHooks {
   choose(choices: Choice[]): Promise<number>;
   movie(file: string): Promise<void>;
