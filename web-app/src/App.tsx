@@ -57,6 +57,7 @@ export default function App() {
   const movieResolve = useRef<(() => void) | null>(null);
   const startOptsRef = useRef<{ snapshot?: Snapshot; pc?: number; menu?: string | null }>({});
   const startingRef = useRef(false);
+  const startedRef = useRef(false);
   const [resumeMode, setResumeMode] = useState(false);
 
   const [manifest, setManifest] = useState<Manifest | null>(null);
@@ -216,6 +217,10 @@ export default function App() {
           rendererRef.current = new StageRenderer(canvasRef.current, assets, vm);
         }
         setReady(true);
+        if (startedRef.current) {
+          // A Fast Refresh preserved the React state but recreated the VM.
+          void vm.start(startOptsRef.current);
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       }
@@ -278,6 +283,7 @@ export default function App() {
     const vm = vmRef.current;
     if (!vm || startingRef.current) return;
     startingRef.current = true;
+    startedRef.current = true;
     await vm.audio.resume();
     setStarted(true);
     void vm.start(startOptsRef.current);
