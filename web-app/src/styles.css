@@ -1,0 +1,252 @@
+:root {
+  color-scheme: dark;
+  --bg: #0b0b0e;
+  --panel: #17171d;
+  --line: #2b2b35;
+  --text: #e9e6df;
+  --muted: #9b978e;
+  --accent: #d8a85a;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Noto Sans CJK JP", "Noto Sans JP", system-ui, sans-serif;
+}
+
+body {
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.stage-wrap {
+  position: relative;
+  flex: 1;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: 12px;
+}
+
+.stage {
+  width: min(100%, calc((100vh - 90px) * 4 / 3));
+  aspect-ratio: 4 / 3;
+  max-height: calc(100vh - 90px);
+  background: #000;
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.65);
+  cursor: pointer;
+  touch-action: none;
+}
+
+.veil {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(4, 4, 6, 0.82);
+  backdrop-filter: blur(2px);
+  z-index: 5;
+}
+
+.start-veil {
+  text-align: center;
+}
+
+.start-veil h1 {
+  font-size: clamp(20px, 3vw, 38px);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  margin: 0 0 8px;
+}
+
+.start-veil p {
+  color: var(--muted);
+  margin: 0 0 24px;
+}
+
+button {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button.on {
+  background: var(--accent);
+  color: #141414;
+  border-color: var(--accent);
+}
+
+.error {
+  color: #ff8a8a;
+  max-width: 640px;
+  margin-top: 16px;
+}
+
+.hint {
+  color: var(--muted);
+}
+
+.resume-info {
+  color: var(--accent);
+  font-size: 13px;
+  margin-top: 6px;
+  letter-spacing: 0.04em;
+}
+
+.choice-veil {
+  background: rgba(0, 0, 0, 0.35);
+  align-items: end;
+  padding-bottom: 9vh;
+}
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(620px, 78%);
+}
+
+.choices button {
+  padding: 13px 20px;
+  font-size: clamp(15px, 1.5vw, 20px);
+  text-align: left;
+  background: rgba(20, 20, 26, 0.94);
+}
+
+.movie-veil {
+  background: #000;
+  cursor: pointer;
+}
+
+.movie-veil video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.movie-skip {
+  position: absolute;
+  right: 18px;
+  bottom: 14px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.end-veil {
+  text-align: center;
+}
+
+.backlog {
+  position: absolute;
+  inset: 6% 8%;
+  background: rgba(12, 12, 16, 0.97);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  z-index: 6;
+  overflow: hidden;
+}
+
+.backlog-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.backlog-body {
+  padding: 12px 20px 24px;
+  overflow: auto;
+  line-height: 1.65;
+}
+
+.backlog-body p {
+  margin: 0 0 6px;
+  white-space: pre-wrap;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+  overflow-x: auto;
+  flex: 0 0 auto;
+}
+
+.toolbar button {
+  padding: 5px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.toolbar .status {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 42vw;
+}
+
+.debug {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  max-width: 360px;
+  max-height: 60vh;
+  overflow: auto;
+  background: rgba(8, 8, 10, 0.92);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font: 12px/1.4 ui-monospace, monospace;
+  color: var(--muted);
+  z-index: 9;
+}
+
+.debug .cmd {
+  color: var(--accent);
+  margin: 6px 0;
+  white-space: pre-wrap;
+}
+
+.debug pre {
+  margin: 6px 0 0;
+  color: var(--text);
+}
