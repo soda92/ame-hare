@@ -11,6 +11,7 @@ export class StageRenderer {
   private specCache = new Map<string, LoadedImage>();
   private rawCache = new Map<string, HTMLImageElement>();
   private pending = new Set<string>();
+  private signCache = new WeakMap<HTMLCanvasElement, boolean>();
 
   constructor(canvas: HTMLCanvasElement, assets: AssetStore, vm: Vm) {
     this.canvas = canvas;
@@ -150,8 +151,40 @@ export class StageRenderer {
       const img = this.getSpec(sp.spec);
       if (!img) continue;
       const cell = img.cells[Math.max(0, Math.min(img.cells.length - 1, sp.cell))];
-      if (cell) this.ctx.drawImage(cell, sp.x, sp.y);
+      if (cell) {
+        this.ctx.drawImage(cell, sp.x, sp.y);
+        if (sp.no === 108) this.maskSmokingSign(cell, sp.x, sp.y);
+      }
     }
+  }
+
+  /**
+   * The default top-bar art (mw_bg01u.bmp) includes a decorative, clipped
+   * "禁煙 / NO SMOKING" sticker at the far right. It is not a button and looks
+   * like an artifact at 800×600, so mask it with the surrounding bar colour.
+   */
+  private maskSmokingSign(cell: HTMLCanvasElement, x: number, y: number) {
+    let has = this.signCache.get(cell);
+    if (has === undefined) {
+      has = false;
+      const cctx = cell.getContext("2d", { willReadFrequently: true });
+      const w = Math.min(44, cell.width);
+      if (cctx && w > 0) {
+        const data = cctx.getImageData(cell.width - w, 0, w, 28).data;
+        for (let i = 0; i < data.length; i += 4) {
+          if (data[i] > 150 && data[i + 1] < 80 && data[i + 2] < 80) {
+            has = true;
+            break;
+          }
+        }
+      }
+      this.signCache.set(cell, has);
+    }
+    if (!has) return;
+    const cctx = cell.getContext("2d", { willReadFrequently: true });
+    const sample = cctx?.getImageData(Math.max(0, cell.width - 60), 5, 1, 1).data;
+    this.ctx.fillStyle = sample ? `rgb(${sample[0]},${sample[1]},${sample[2]})` : "#262626";
+    this.ctx.fillRect(x + cell.width - 44, y, 44, 28);
   }
 
   private drawText() {
