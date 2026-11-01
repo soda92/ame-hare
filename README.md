@@ -30,8 +30,10 @@ the extractor at your own discs.
 | BGM / SE / voice (IMA ADPCM WAV decoded in the browser) | ✅ |
 | Opening movie (`CIO.DAT` → MP4 via ffmpeg) | ✅ |
 | Save / load / configuration / title / music / CG gallery menus | ✅ |
+| CG thumbnails, scene replay and label-access (`lchk`) tracking | ✅ |
 | Backlog, auto mode, skip mode, fullscreen, debug panel | ✅ |
 | URL scene/command/menu state and refresh restore | ✅ |
+| Static script/asset audit (`cmd/audit`) and CI | ✅ |
 | Translation sidecar / English UI | ⛔ not started |
 
 ## Quick start
@@ -82,7 +84,17 @@ pnpm install
 pnpm build
 ```
 
-### 3. Run
+### 3. Audit the extracted data
+
+```sh
+go run ./cmd/audit -script ./data/script.txt -data ./data
+```
+
+This checks label targets, `for`/`next` balance, commands against the VM
+implementation, and every referenced image/audio/movie asset. The current
+script passes with zero errors and zero missing assets.
+
+### 4. Run
 
 ```sh
 go run ./cmd/server -data ./data -addr :8080
@@ -137,10 +149,13 @@ line.
 
 ```text
 cmd/extract/        disc + archive + script + media extractor
+cmd/audit/          static script/asset checker
 cmd/server/         HTTP server and static media
 pkg/disc/           CloneCD / ISO 9660 + Joliet reader
 pkg/nsa/            NScripter NSA archive and SPB bitmap codec
 pkg/scene/          CISCENE.DAT XOR-0x84 + CP932 decoder
+pkg/audit/          script/asset audit library and tests
+.github/workflows/  Go + frontend CI
 web-app/            React 19 + Vite + TypeScript player
   src/game/         script parser, VM, stage renderer, assets, audio, saves
 docs/               format and engine notes
@@ -151,6 +166,7 @@ data/               extracted assets (gitignored)
 
 ```sh
 go test ./...
+go run ./cmd/audit -script ./data/script.txt -data ./data
 cd web-app && pnpm build
 ```
 

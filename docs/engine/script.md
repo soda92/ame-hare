@@ -66,12 +66,20 @@ The VM implements the commands this game uses:
   `cellcheckexbtn`, `exbtn_d`, `btntime`, `btnwait`, `btnwait2`,
   `selectbtnwait`, `textbtnwait`, `spclclk`
 - choices: `csel`, `cselgoto` (the engine renders `csel` natively)
-- audio: `bgm`, `bgmstop`, `dwave`, `dwavestop`, `stop`, `mp3vol`, `bgmvol`,
-  `sevol`, `voicevol`
+- audio: `bgm`, `bgmonce`, `bgmstop`, `dwave`, `dwavestop`, `stop`, `mp3vol`,
+  `bgmvol`, `sevol`, `voicevol`
 - waits: `delay`, `resettimer`, `waittimer`
 - saves: `savenumber`, `saveoff`, `saveon`, `savegame`, `loadgame`, `savetime`
 - misc: `trap`, `skipoff`, `mpegplay`, `systemcall`, `isfull`, `menu_full`,
-  `menu_window`, `lookbackon/off/flush`
+  `menu_automode`, `menu_window`, `lookbackon/off/flush`
+
+## Label access (`lchk`)
+
+`lchk *label` is a condition value: 1 if the label has been reached, 0
+otherwise. The VM records every label line it executes in a persistent
+`seenLabels` set (`localStorage` key `amehare.seen.v1`). The scene-replay menu
+uses this to show a thumbnail for seen scenes and `rm_dummy.bmp` for unseen
+ones.
 
 Unknown commands are ignored, with a debug console note.
 
@@ -131,6 +139,20 @@ are persisted separately (`amehare.globals.v1`).
 - `:c` is opaque.
 - `:s/fontW,fontH,pitchDelta,flags;#rrggbb...text` renders a string sprite.
 - `/cells` splits the bitmap horizontally.
+
+String arguments may also use NScripter's file-log form:
+
+```text
+("CG-EV2-3.bmp")":c/2,0,3;TE2-3.bmp"":c;gm_dummy.bmp"
+```
+
+The parenthesized value is a file-log tag, the first string is the thumbnail
+shown once the CG has been logged, and the second string is the dummy used for
+unseen CGs. The engine currently always takes the thumbnail, so the gallery
+shows all thumbnails.
+
+`bg` also accepts a colour such as `bg #81BC67,10,1500`; the renderer fills the
+stage with that colour instead of loading an image.
 
 Sprites are drawn in **descending number order** (high numbers behind, low
 numbers in front), matching NScripter. Window frame sprites 108/109 are drawn
